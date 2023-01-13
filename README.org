@@ -1,0 +1,140 @@
+#+qiita_teams: 1494189a532174dddf66
+#+OPTIONS: ^:{}
+#+STARTUP: indent nolineimages
+#+TITLE: twist maker 
+#+AUTHOR: Shigeto R. Nishitani
+#+EMAIL:     (concat "nishitani@kwansei.ac.jp")
+#+LANGUAGE:  jp
+#+OPTIONS:   H:4 toc:t num:2
+#+tags: al_twist
+#+SETUPFILE: ~/.emacs.d/org-mode/theme-readtheorg.setup
+
+* intro
+twist粒界の作成手順
+
+| https://nishitani.qiita.com/files/e226ace7-0817-4748-b98d-7bb01f018aa0.png|
+| モデル|
+
+* viewer
+
+: open sketch_twist.pde
+
+でdata/POSCARを表示．
+
+以下の表示は粒界最近傍の２層を取り出して表示している．
+見やすいようにユニットセルを囲い，拡張している．
+
+
+|https://nishitani.qiita.com/files/98c3162d-b1d7-6944-128c-38abd6589819.png
+|sketch_twist.pdeでの表示結果 |
+
+表示の体裁を整えるoptionsは，mk_twistではなく，viewerに実装すべき．
+
+三面図で表示させてみようか．．．
+
+下記のようにして描画範囲を選択すると，見やすいんですが．．．
+#+begin_src ruby
+1:   poss.each {|pos| pos[2] < 0.5 ? pos0 << pos : pos1 << pos }
+
+2:   poss.each do |pos|
+     if (pos[2]/0.125)%2==1
+       pos0 << pos
+     else
+       pos1 << pos
+     end
+   end
+#+end_src
+
+詳しい解説やコードは
+[[https://nishitani.qiita.com/daddygongon/items/73a73599539920cd7983][twist viewer]]
+に記した．
+
+* modeler
+1. 100の基本格子を2倍，2倍で拡張する．
+1. それを縦に積む．2layer.
+1. そいつを捻る．
+
+** mk_twist.rb
+
+#+begin_src ruby
+  3require 'scanf'
+  4require 'matrix'
+  5include Math
+  6
+  7class MkTwist
+  8  attr_accessor :lat, :pos, :n_atom, :rotate_pos, :expand_pos
+  9  def initialize...end
+ 17  def read_poscar_0...end
+ 33  def mod_pos(poss)...end
+ 49  def print_poscar...end
+ 65  def print_poscar_final(dir)...end
+ 69  def expand_lat(zz=false)...end
+ 87  def r_matrix(theta)...end
+ 92  def rotate_lat(theta)...end
+ 97  def rotate_pos(theta, pos_z='all')...end
+122end
+123
+124twist = MkTwist.new
+125puts twist.print_poscar()
+126twist.print_poscar_final('.')
+127twist.print_poscar_final('sketch_twist/data')
+#+end_src
+
+#+include: ./mk_twist.rb
+
+
+** results
+結果は次の通り．さらに，./POSCAR, ./sketch_twist/data/POSCARに保存される．
+また，
+#+begin_example
+> ruby mk_twist.rb 3
+n_sigma=   3, theta=  0.3218, angle= 18.4349, twist boundary
+4.0414
+   1.5811388301    0.0000000000    0.0000000000
+   0.0000000000    1.5811388301    0.0000000000
+   0.0000000000    0.0000000000    4.0000000000
+40
+Direct
+   0.2000000000    0.4000000000    0.0000000000
+   0.0000000000    0.0000000000    0.0000000000
+   0.4000000000    0.8000000000    0.0000000000
+   0.8000000000    0.6000000000    0.0000000000
+   0.6000000000    0.2000000000    0.0000000000
+   0.9000000000    0.3000000000    0.1250000000
+   0.5000000000    0.5000000000    0.1250000000
+...
+#+end_example
+
+引数が省略された場合は，3が入る．
+n_sigmaの値を使ってviewerのtilt_rectが描画される．
+
+えっと，あまりにsite_numberが飛びすぎるので，sortをかけるバージョンが要りそう．
+これは，print_poscarの中で，
+#+begin_src ruby
+@rotate_pos.sort!{|a,b| a[2] <=> b[2]}
+#+end_src
+で実行している．
+
+** rotate_lat
+twist boundaryを作るときに，keyとなるのはrotate_lat関数です．
+これで，ユニットセルの軸を$\theta$radian回転させています．
+#+begin_src ruby
+  def rotate_lat(theta)
+    @lat[0] = (r_matrix(theta)*Vector[@sigma/2.0,-1.0/2.0,0.0]).to_a
+    @lat[1] = (r_matrix(theta)*Vector[1.0/2.0,@sigma/2.0,0.0]).to_a
+  end
+#+end_src
+
+最初にユニットセルを2x2倍に拡張しているので，
+その<3/2, -1/2>と<1/2, 3/2>POSCAR基本ベクトルは
+* 発展形
+
+mk_twist.rbを拡張して5x5および7x7を作ってみた．
+どこまであっているかは検討する必要ある．
+また，近づきすぎた原子を削除する必要があるかも．
+VASPでじっくり検討すべき．あるいは，文献を探す．
+| https://nishitani.qiita.com/files/637806f6-be1b-0fb2-e1af-d4899d932760.png | https://nishitani.qiita.com/files/e9c49057-99dc-7a58-8eb6-615db95fd253.png
+| 5x5 | 7x7
+
+
+

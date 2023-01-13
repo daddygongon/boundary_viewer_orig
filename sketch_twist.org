@@ -1,0 +1,130 @@
+#+qiita_teams: 9aacc25a3c588120d570
+#+OPTIONS: ^:{}
+#+STARTUP: indent nolineimages
+#+TITLE: twist viewer
+#+AUTHOR: Shigeto R. Nishitani
+#+EMAIL:     (concat "nishitani@kwansei.ac.jp")
+#+LANGUAGE:  jp
+#+OPTIONS:   H:4 toc:t num:2
+#+tags: al_twist
+#+SETUPFILE: ~/.emacs.d/org-mode/theme-readtheorg.setup
+
+* intro
+
+粒界Energyの有限温度第一原理計算では，Einsteinモデルのバネ定数決定に
+大量の第一原理計算が必要となる．
+
+100原子程度のサイズの計算では，系のエネルギー計算は10分程度である．
+これを
+100原子，４点，３方向，４体積
+で計算するとなると， 30日程度が必要となる．
+
+等価なサイトを抽出することでその計算量を激減させることが可能である．
+その様子を以下に示した．
+
+https://nishitani.qiita.com/files/6e7fa5a9-c6ed-401b-e93a-178b849218a1.png
+
+これは，5x5のユニットを示している．
+No.0とNo.59のサイトが等価であることがすぐにわかる．
+その4分の一の領域にせばめて考えても，
+10, 2 ,34 ,44 が等価なサイトとみなせそうである．
+そうすると，26原子での計算が5サイトの計算ですますことが
+可能となる．
+
+つまり，1/5程度に削減することができる．
+そのほかの層でも同じことが可能であろう．
+このように，等価なサイトを見つけやすくする視覚化を進めていくことが，
+計算量削減の重要なステップであり，本研究の目的である．
+そのためには，モデルの視認性の高い表示と
+実際のvasp計算での数値的な整合性を確かめる必要がある．
+
+* sketch_twist.pde
+次にprocessingで書いた表示codeを示している．
+このパラメータ調整やリファクタリングを進めることで，
+視認性の高い表示を駆使できるソフトを作成する．
+
+用意されている大域変数と関数は以下の通り．
+#+begin_src c++
+
+  1
+  2import processing.pdf.*;
+  3
+  4float[] la = new float[3];
+  5float[][] pos;
+  6float scale = 80.0; // whole scale
+  7float theta;
+  8String[] lines;
+  9String[] m;
+ 10
+ 11int n_atom;
+ 12int sigma;
+ 13float x_lat; // = 168;
+ 14float y_lat; // = 100;
+ 15int rr=6; // ellipse radius
+ 16
+ 17void setup() {...}
+ 23void draw() {...}
+ 32void circle(int x, int y, int r) {...}
+ 35void up_tri(float x, float y, float r) {...}
+ 46void down_tri(float x, float y, float r) {...}
+ 57float[] r_matrix(float theta, float x, float y) {...}
+ 63void load_poscar() {...}
+ 81void draw_tilt_rect() {...}
+ 97void draw_number(int num, float[] pos, boolean print_num) {...}
+104void draw_atom(boolean print_num) {...}
+#+end_src
+
+setupあるいはdraw関数のパラメータを調節することで表示をコントロールする．
+うまくいけば，controllerを入れてviewer自身にスイッチをつける．
+
+#+begin_src c++
+void setup() {
+  size(600, 480);
+  load_poscar();
+  noLoop();
+  beginRecord(PDF, "filename.pdf");
+}
+
+void draw() {
+  ellipseMode(RADIUS);  // Set ellipseMode to RADIUS
+  background(255);
+
+  rect(-0.5*x_lat+width/2, 0.5*y_lat+height/2, x_lat, -y_lat);
+  draw_atom(false);
+  draw_tilt_rect(153);
+  endRecord();
+}
+#+end_src
+
+#+name: sketch_twist/sketch_twist.pde
+#+include: ./sketch_twist/sketch_twist.pde src c++
+
+
+* 全層の表示
+3x3のposcarをz軸の値でソートすると次の通り．
+
+#+include: ./POSCAR_3x3
+
+pdeのdraw_atomに描画範囲を選択する引数を入れて
+#+begin_src c++
+//  draw_atom(true, 0.125, 0.0, 1.0); // 0-7
+//  draw_atom(true, 0.125, 0.125, 0.5-0.125); // 1-2
+//  draw_atom(true, 0.125, 0.5-0.125, 0.5+0.125); // 3-4
+  draw_atom(true, 0.125, 0.5+0.125, 1.0-0.125); // 5-6
+#+end_src
+としてそれぞれの層を描画．デフォルトは0-7層．
+
+|https://nishitani.qiita.com/files/ea74acb6-dbba-a203-0ba8-8c3d3a20f674.png | https://nishitani.qiita.com/files/b106de6d-edc2-839e-a54b-d8b62f089ecb.png
+| 0-7 層| 1-2層
+| https://nishitani.qiita.com/files/c0facd9c-930a-9810-7b66-aeda9c3dafa6.png | https://nishitani.qiita.com/files/3d194009-d8f0-807f-750d-f56d6d13b98a.png 
+| 3-4層 | 5-6層 
+
+ 0-7層と3-4層に粒界がある．
+一方，1-2層及び5-6層は完全結晶となっている．
+これから等価なサイトの番号は，
+#+begin_example
+4: 38, 24, 17
+3: ...
+#+end_example
+などと予想される．
+これを，ksで確認する．

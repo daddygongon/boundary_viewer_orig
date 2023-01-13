@@ -1,0 +1,89 @@
+import processing.pdf.*;
+
+float[] la = new float[3];
+float[][] pos;
+float scale = 80.0; // whole scale
+int n_atom;
+float x_lat; // = 168;
+float y_lat; // = 100;
+int rr=6; // ellipse radius
+
+void setup() {
+  size(600, 480);
+  noLoop();
+  beginRecord(PDF, "filename.pdf");
+}
+
+void draw() {
+  ellipseMode(RADIUS);  // Set ellipseMode to RADIUS
+  draw_atom();
+  endRecord();
+}
+
+void circle(int x, int y, int r) {
+  ellipse(x, y, r, r);
+}
+
+void up_tri(float x, float y, float r) {
+  float rx = 0.866025*1.2;
+  float ry = 0.5*1.2;
+  float x1 = x- rx*r;
+  float y1 = y+ ry*r;
+  float x2 = x+ rx*r;
+  float y2 = y+ ry*r;
+  float x3 = x;
+  float y3 = y - r;
+  triangle(x1, y1, x2, y2, x3, y3);
+}
+
+void down_tri(float x, float y, float r) {
+  float rx = 0.866025*1.2;
+  float ry = 0.5*1.2;
+  float x1 = x- rx*r;
+  float y1 = y- ry*r;
+  float x2 = x+ rx*r;
+  float y2 = y- ry*r;
+  float x3 = x;
+  float y3 = y + r;
+  triangle(x1, y1, x2, y2, x3, y3);
+}
+
+void draw_atom() {
+  String[] lines;
+
+  lines = loadStrings("POSCAR");
+  String[] m;
+  println(lines[0]);
+  for (int i = 0; i < 3; i++) {
+    m = match(lines[i+2], "\\s*(\\d+.\\d+)\\s+(\\d+.\\d+)\\s+(\\d+.\\d+)");
+    la[i] = float(m[i+1]);
+  }
+  m = match(lines[6], "\\s*(\\d+)\\s*(\\d+)");
+  n_atom = int(m[1]);
+
+  x_lat = la[0]*scale;
+  y_lat = la[1]*scale;
+  pos = new float[n_atom][3];
+
+  background(255);
+  for (int i = 0; i < n_atom; i++) {
+    m = match(lines[i+8], "\\s*([-]?\\d+.\\d+)\\s*([-]?\\d+.\\d+)\\s*([-]?\\d+.\\d+)");
+    pos[i][0] = (float(m[1])-0.5)*la[0]*scale+width/2;
+    pos[i][1] = (-float(m[2])-0.5)*la[1]*scale+height*3/4;
+    pos[i][2] = float(m[3]);
+    println(pos[i][2]);
+    for (int j=0; j<1; j++) {
+      for (int k=0; k<1; k++) {
+        if ((pos[i][2] >= 0.0) && (pos[i][2] < 0.125)) { // 1st
+          //if ((pos[i][2] >= 0.5-0.125) && (pos[i][2] < 0.5)) { // 4th 
+          fill(0);
+          down_tri(pos[i][0]+x_lat*j, pos[i][1]+y_lat*k, rr);
+        } else if ((pos[i][2] >= 1.0-0.125) && (pos[i][2] < 1.0)) { //
+          //} else if ((pos[i][2] >= 0.5) && (pos[i][2] < 0.625)) { // 5th
+          fill(255);
+          up_tri(pos[i][0]+x_lat*j, pos[i][1]+y_lat*k, rr);
+        }
+      }
+    }
+  }
+}
